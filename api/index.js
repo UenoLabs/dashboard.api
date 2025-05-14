@@ -1,19 +1,21 @@
 // index.js
 import express from "express";
+import dotenv from "dotenv";
 import { db, storage } from "./config/firebase.js"; // Adjust the path as necessary
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import attendanceRoute from "./router/attendance.router.js";
 import userRoute from "./router/user.router.js";
 import lecturerRoute from "./router/lecturer.router.js";
 import departmentRoute from "./router/department.router.js";
+import authRoute from "./router/auth.router.js";
 
 
-
+dotenv.config();
 const app = express();
 app.use(express.json());
 
 // Get data from Firestore
-
+console.log("JWT_SECRET from env =>", process.env.JWT_SECRET); 
 // Add new user to Firestore
 app.use("/api", userRoute);
 
@@ -30,7 +32,7 @@ app.post("/create", async (req, res) => {
 app.use("/api/courses", attendanceRoute)
 app.use("/api/lecturer", lecturerRoute)
 app.use("/api/department", departmentRoute)
-
+app.use("/api/auth", authRoute)
 
 
 
