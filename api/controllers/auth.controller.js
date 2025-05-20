@@ -1,7 +1,9 @@
 import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { db } from "../config/firebase.js";
+import { generateTokenAndSetCookie } from "../lib/utils/generateToken.js";
+
+
 
 // const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -11,15 +13,17 @@ export const registerUser = async (req, res) => {
   const { fullName, email, password, university } = req.body;
 
   try {
-    // Check if user exists
+    // ✅ Check if user already exists
     const q = query(collection(db, "admins"), where("email", "==", email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
       return res.status(400).json({ error: "Email already exists" });
     }
 
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // ✅ Add new admin to Firestore
     const docRef = await addDoc(collection(db, "admins"), {
       fullName,
       email,
@@ -28,14 +32,25 @@ export const registerUser = async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    res.status(201).json({ id: docRef.id, message: "Admin registered" });
+    // ✅ Generate token and set cookie
+    generateTokenAndSetCookie(docRef.id, res);
+
+    res.status(201).json({
+      message: "Admin registered successfully",
+      user: {
+        id: docRef.id,
+        fullName,
+        email,
+        university,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 // LOGIN
 // import jwt from "jsonwebtoken";
+
 
 
 export const loginUser = async (req, res) => {
@@ -57,15 +72,11 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // ✅ Make sure JWT_SECRET is used here correctly
-    const token = jwt.sign(
-      { id: userDoc.id, email: userData.email },
-      process.env.JWT_SECRET, // this must NOT be undefined
-      { expiresIn: "1d" }
-    );
+    // ✅ Generate token and set cookie securely
+    generateTokenAndSetCookie(userDoc.id, res);
 
     res.status(200).json({
-      token,
+      message: "Login successful",
       user: {
         id: userDoc.id,
         fullName: userData.fullName,
@@ -77,6 +88,16 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ error: err.message });
     console.error("Error during login:", err);
     console.log("JWT_SECRET from env =>", process.env.JWT_SECRET);
-
   }
+};
+
+
+export const logoutUser = (req, res) => {
+    try {
+        res.cookie("jwt", "", {maxAge:0})
+        res.status(200).json({message:"Logged out successfully"})
+    } catch (error) {
+      console.error("Error in login controller", error.message);
+      res.status(500).json({message:"Internal server error"})
+    }
 };

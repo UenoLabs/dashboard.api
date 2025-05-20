@@ -27,3 +27,23 @@ export const getLecturers = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getLecturerById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const docRef = await getDocs(collection(db, "lecturer"));
+    const lecturer = docRef.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })).find(lecturer => lecturer.id === id);
+
+    if (!lecturer) {
+      return res.status(404).json({ error: "Lecturer not found" });
+    }
+
+    res.status(200).json(lecturer);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
