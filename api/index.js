@@ -8,6 +8,7 @@ import userRoute from "./router/user.router.js";
 import lecturerRoute from "./router/lecturer.router.js";
 import departmentRoute from "./router/department.router.js";
 import authRoute from "./router/auth.router.js";
+import dashboardRoute from "./router/dashboard.router.js";
 
 
 dotenv.config();
@@ -29,7 +30,8 @@ app.post("/create", async (req, res) => {
 });
 
 // Get attendance summary for a course
-app.use("/api/courses", attendanceRoute)
+app.use("/api/dashboard", dashboardRoute)
+app.use("/api/attendance", attendanceRoute)
 app.use("/api/lecturer", lecturerRoute)
 app.use("/api/department", departmentRoute)
 app.use("/api/auth", authRoute)
