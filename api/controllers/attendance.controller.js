@@ -1,68 +1,64 @@
 import { db } from "../config/firebase.js";
-import { collection, getDocs, listCollections } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 
 export const getAllAttendance = async (req, res) => {
   try {
-    // 1. List all root-level collections (CSC 307, CSC 309, etc.)
-    const rootCollections = await listCollections(db);
+    // Step 1: Get all students enrolled in CSC 307
+    const studentsRef = collection(db, "students");
+    const studentSnap = await getDocs(studentsRef);
+    const allStudents = studentSnap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(student => student.courses?.includes("CSC 307"));
 
-    const allSummary = [];
+    // Step 2: Get all attendance documents under CSC 307
+    const csc307Ref = collection(db, "CSC 307");
+    const classDocsSnap = await getDocs(csc307Ref);
 
-    for (const courseCollection of rootCollections) {
-      const courseId = courseCollection.id;
+    let totalClasses = 0;
+    const attendanceMap = {};
 
-      // Skip if it doesn't have 'students' or 'attendance'
-      const subCollections = await listCollections(courseCollection);
-      const subNames = subCollections.map(col => col.id);
-      if (!subNames.includes("students") || !subNames.includes("attendance")) continue;
+    for (const doc of classDocsSnap.docs) {
+      const attendanceSubRef = collection(db, "CSC 307", doc.id, "attendance");
+      const attendanceSnap = await getDocs(attendanceSubRef);
 
-      const studentsRef = collection(db, courseId, "students");
-      const attendanceRef = collection(db, courseId, "attendance");
+      if (!attendanceSnap.empty) {
+        totalClasses++; // Count only classes that recorded attendance
+      }
 
-      const studentsSnap = await getDocs(studentsRef);
-      const attendanceSnap = await getDocs(attendanceRef);
-
-      const students = studentsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      const attendanceMap = {};
-      const uniqueDates = new Set();
-
-      attendanceSnap.docs.forEach(doc => {
-        const record = doc.data()?.attendance;
-        const studentId = record?.studentId;
-        const date = record?.dateOfClass;
-
-        if (studentId && date) {
-          attendanceMap[studentId] = (attendanceMap[studentId] || 0) + 1;
-          uniqueDates.add(date);
-        }
-      });
-
-      const totalClasses = uniqueDates.size;
-
-      students.forEach(student => {
-        const attended = attendanceMap[student.studentId] || 0;
-        const percentage = totalClasses === 0 ? 0 : Math.round((attended / totalClasses) * 100);
-
-        allSummary.push({
-          name: student.name || "Unnamed",
-          email: student.email || "No Email",
-          studentId: student.studentId || "No ID",
-          course: courseId,
-          classesAttended: `${attended}/${totalClasses}`,
-          attendanceRate: `${percentage}%`,
+      attendanceSnap.forEach(attDoc => {
+        const attendees = attDoc.data().attendance || [];
+        attendees.forEach(record => {
+          const reg = record.regNumber?.toLowerCase();
+          if (!reg) return;
+          if (!attendanceMap[reg]) attendanceMap[reg] = 0;
+          attendanceMap[reg]++;
         });
       });
     }
 
-    res.status(200).json(allSummary);
+    // Step 3: Construct response per student
+    const attendanceData = allStudents.map(student => {
+      const regNumber = student.regNumber?.toLowerCase();
+      const attended = attendanceMap[regNumber] || 0;
+      const attendanceRate = totalClasses
+        ? Math.round((attended / totalClasses) * 100)
+        : 0;
 
+      return {
+        name: `${student.firstName} ${student.lastName}`,
+        studentID: student.regNumber,
+        email: student.emailAddress || "",
+        attendanceRate: `${attendanceRate}%`,
+        classesAttended: `${attended}/${totalClasses}`,
+      };
+    });
+
+    res.status(200).json(attendanceData);
   } catch (error) {
-    console.error("Error fetching attendance:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch attendance data",
+      error: error.message,
+    });
   }
 };
 
