@@ -1,9 +1,12 @@
 import express from 'express';
-import { getAllAttendance } from '../controllers/attendance.controller.js';
+import { getAllAttendance, getStudentAttendance } from '../controllers/attendance.controller.js';
+import { protectRoute } from '../middleware/protectRoute.js';
 
 const router = express.Router();
 
-router.get("/", getAllAttendance)
+router.get("/", protectRoute, getAllAttendance)
+router.get("/:regNumber/", protectRoute, getStudentAttendance);
+
 // router.get("/:courseId", getAttendance)
 
 

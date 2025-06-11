@@ -8,51 +8,6 @@ import { generateTokenAndSetCookie } from "../lib/utils/generateToken.js";
 // const JWT_SECRET = process.env.JWT_SECRET;
 
 
-// REGISTER
-export const registerUser = async (req, res) => {
-  const { fullName, email, password, university } = req.body;
-
-  try {
-    // ✅ Check if user already exists
-    const q = query(collection(db, "admins"), where("email", "==", email));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return res.status(400).json({ error: "Email already exists" });
-    }
-
-    // ✅ Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // ✅ Add new admin to Firestore
-    const docRef = await addDoc(collection(db, "admins"), {
-      fullName,
-      email,
-      password: hashedPassword,
-      university,
-      createdAt: new Date().toISOString(),
-    });
-
-    // ✅ Generate token and set cookie
-    generateTokenAndSetCookie(docRef.id, res);
-
-    res.status(201).json({
-      message: "Admin registered successfully",
-      user: {
-        id: docRef.id,
-        fullName,
-        email,
-        university,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-// LOGIN
-// import jwt from "jsonwebtoken";
-
-
-
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 

@@ -3,64 +3,93 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 
 export const getAllAttendance = async (req, res) => {
   try {
-    // Step 1: Get all students enrolled in CSC 307
     const studentsRef = collection(db, "students");
     const studentSnap = await getDocs(studentsRef);
-    const allStudents = studentSnap.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(student => student.courses?.includes("CSC 307"));
+    const allStudents = studentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // Step 2: Get all attendance documents under CSC 307
-    const csc307Ref = collection(db, "CSC 307");
-    const classDocsSnap = await getDocs(csc307Ref);
+    const attendanceData = await Promise.all(
+      allStudents.map(async (student) => {
+        const regNumber = student.regNumber?.toLowerCase();
+        const courses = student.courses || [];
 
-    let totalClasses = 0;
-    const attendanceMap = {};
+        let totalAttended = 0;
+        let totalClasses = 0;
 
-    for (const doc of classDocsSnap.docs) {
-      const attendanceSubRef = collection(db, "CSC 307", doc.id, "attendance");
-      const attendanceSnap = await getDocs(attendanceSubRef);
+        for (const course of courses) {
+          const studentDocRef = doc(db, "courses", course, "students", regNumber);
+          const studentDocSnap = await getDoc(studentDocRef);
 
-      if (!attendanceSnap.empty) {
-        totalClasses++; // Count only classes that recorded attendance
-      }
+          if (studentDocSnap.exists()) {
+            const studentCourseData = studentDocSnap.data();
+            const attendedClasses = studentCourseData.classesAttendedIds || {};
+            const attendedCount = Object.keys(attendedClasses).length;
+            totalAttended += attendedCount;
+          }
 
-      attendanceSnap.forEach(attDoc => {
-        const attendees = attDoc.data().attendance || [];
-        attendees.forEach(record => {
-          const reg = record.regNumber?.toLowerCase();
-          if (!reg) return;
-          if (!attendanceMap[reg]) attendanceMap[reg] = 0;
-          attendanceMap[reg]++;
-        });
-      });
-    }
+          const attendanceCol = collection(db, "courses", course, "attendance");
+          const attendanceSnap = await getDocs(attendanceCol);
+          totalClasses += attendanceSnap.size;
+        }
 
-    // Step 3: Construct response per student
-    const attendanceData = allStudents.map(student => {
-      const regNumber = student.regNumber?.toLowerCase();
-      const attended = attendanceMap[regNumber] || 0;
-      const attendanceRate = totalClasses
-        ? Math.round((attended / totalClasses) * 100)
-        : 0;
+        const attendanceRate = totalClasses
+          ? Math.round((totalAttended / totalClasses) * 100)
+          : 0;
 
-      return {
-        name: `${student.firstName} ${student.lastName}`,
-        studentID: student.regNumber,
-        email: student.emailAddress || "",
-        attendanceRate: `${attendanceRate}%`,
-        classesAttended: `${attended}/${totalClasses}`,
-      };
-    });
+        return {
+          name: `${student.firstName} ${student.lastName}`,
+          studentID: student.regNumber,
+          email: student.emailAddress || "",
+          attendanceRate: `${attendanceRate}%`,
+          classesAttended: `${totalAttended}/${totalClasses}`,
+        };
+      })
+    );
 
     res.status(200).json(attendanceData);
   } catch (error) {
+    console.error("Attendance error:", error);
     res.status(500).json({
       message: "Failed to fetch attendance data",
       error: error.message,
     });
   }
 };
+
+
+// get students attendance 
+
+export const getStudentAttendance = async (req, res) => {
+  const { regNumber } = req.params;
+
+  try {
+    const studentRef = doc(db, "students", regNumber.toLowerCase());
+    const studentSnap = await getDoc(studentRef);
+
+    if (!studentSnap.exists()) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const studentData = studentSnap.data();
+    
+    return res.status(200).json({
+      name: `${studentData.firstName} ${studentData.lastName}`,
+      department: studentData.dept,
+      studentID: studentData.regNumber,
+      phone: studentData.phoneNumber || "",
+      email: studentData.emailAddress || "",
+    });
+  } catch (error) {
+    console.error("Error fetching student attendance:", error);
+    return res.status(500).json({
+      message: "Failed to fetch student attendance",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 
 
 
