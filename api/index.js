@@ -18,7 +18,9 @@ const port = process.env.PORT || 4000;
 console.log("JWT_SECRET from env =>", process.env.JWT_SECRET);
 // Add new user to Firestore
 app.use("/api", userRoute);
-
+app.get("/", async (req, res) => {
+  console.log("the route has been entered");
+});
 app.post("/create", async (req, res) => {
   try {
     const docRef = await addDoc(collection(db, "products"), req.body);
