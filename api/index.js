@@ -10,13 +10,12 @@ import departmentRoute from "./router/department.router.js";
 import authRoute from "./router/auth.router.js";
 import dashboardRoute from "./router/dashboard.router.js";
 
-
 dotenv.config();
 const app = express();
 app.use(express.json());
-
+const port = process.env.PORT || 4000;
 // Get data from Firestore
-console.log("JWT_SECRET from env =>", process.env.JWT_SECRET); 
+console.log("JWT_SECRET from env =>", process.env.JWT_SECRET);
 // Add new user to Firestore
 app.use("/api", userRoute);
 
@@ -30,13 +29,11 @@ app.post("/create", async (req, res) => {
 });
 
 // Get attendance summary for a course
-app.use("/api/dashboard", dashboardRoute)
-app.use("/api/attendance", attendanceRoute)
-app.use("/api/lecturer", lecturerRoute)
-app.use("/api/department", departmentRoute)
-app.use("/api/auth", authRoute)
-
-
+app.use("/api/dashboard", dashboardRoute);
+app.use("/api/attendance", attendanceRoute);
+app.use("/api/lecturer", lecturerRoute);
+app.use("/api/department", departmentRoute);
+app.use("/api/auth", authRoute);
 
 // Upload file to Firebase Storage
 // const upload = multer({ dest: "uploads/" });
@@ -55,7 +52,6 @@ app.use("/api/auth", authRoute)
 //   }
 // }); npm install multer
 
-
-app.listen(7000, () => {
+app.listen(port, () => {
   console.log("Server is running on port 5000");
 });
