@@ -20,6 +20,7 @@ console.log("JWT_SECRET from env =>", process.env.JWT_SECRET);
 app.use("/api", userRoute);
 app.get("/", async (req, res) => {
   console.log("the route has been entered");
+  res.send("Welcome to the API");
 });
 app.post("/create", async (req, res) => {
   try {
