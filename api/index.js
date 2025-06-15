@@ -13,7 +13,7 @@ import dashboardRoute from "./router/dashboard.router.js";
 dotenv.config();
 const app = express();
 app.use(express.json());
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 3000;
 // Get data from Firestore
 console.log("JWT_SECRET from env =>", process.env.JWT_SECRET);
 // Add new user to Firestore
