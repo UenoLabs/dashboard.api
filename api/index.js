@@ -21,9 +21,6 @@ app.use(cookieParser())
 
 
 
-
-
-
 // Get attendance summary for a course
 app.use("/api", userRoute);
 app.use("/api/dashboard", dashboardRoute)
