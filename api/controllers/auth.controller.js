@@ -6,7 +6,47 @@ import { generateTokenAndSetCookie } from "../lib/utils/generateToken.js";
 
 
 // const JWT_SECRET = process.env.JWT_SECRET;
+export const registerUser = async (req, res) => {
+  const { fullName, email, password, university } = req.body;
 
+  try {
+    // Check if user already exists
+    const q = query(collection(db, "admins"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return res.status(400).json({ error: "User already exists with this email" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user document
+    const newUserRef = await addDoc(collection(db, "admins"), {
+      fullName,
+      email,
+      password: hashedPassword,
+      university,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Generate token and set cookie
+    generateTokenAndSetCookie(newUserRef.id, res);
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        id: newUserRef.id,
+        fullName,
+        email,
+        university,
+      },
+    });
+  } catch (err) {
+    console.error("Error during registration:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;

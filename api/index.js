@@ -11,25 +11,21 @@ import authRoute from "./router/auth.router.js";
 import dashboardRoute from "./router/dashboard.router.js";
 
 
+
+
 dotenv.config();
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 const app = express();
 app.use(express.json());
+app.use(cookieParser())
 
-// Get data from Firestore
-console.log("JWT_SECRET from env =>", process.env.JWT_SECRET); 
-// Add new user to Firestore
-app.use("/api", userRoute);
 
-app.post("/create", async (req, res) => {
-  try {
-    const docRef = await addDoc(collection(db, "products"), req.body);
-    res.status(201).json({ id: docRef.id });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+
+
+
 
 // Get attendance summary for a course
+app.use("/api", userRoute);
 app.use("/api/dashboard", dashboardRoute)
 app.use("/api/attendance", attendanceRoute)
 app.use("/api/lecturer", lecturerRoute)
